@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "sdoh-core"
+version = "0.1.0"
+description = "Shared Streamlit/LangChain cores for SDoH assistants"
+authors = ["Social Health AI"]
+license = "Apache 2.0"
+readme = "README.md"
+packages = [{ include = "sdoh_core", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+langchain = "^0.3.25"
+langchain-openai = "^0.3.19"
+langchain-anthropic = "^0.3.0"
+streamlit = "^1.35.0"
+tiktoken = ">=0.4.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
