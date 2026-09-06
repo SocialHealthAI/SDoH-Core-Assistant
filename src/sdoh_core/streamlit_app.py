@@ -41,6 +41,13 @@ class AssistantAppConfig:
     saved_success: str = "Saved."
     no_draft_error: str = "No assistant draft to save."
     file_missing_caption: str = "File does not exist yet. Confirming a write will create it."
+    pending_chat_placeholder: str = (
+        "Confirm write or Cancel the proposed file change before sending another message."
+    )
+    pending_chat_caption: str = (
+        "Chat is paused until you Confirm write or Cancel."
+    )
+    intro_builder: Callable[[str], str] | None = None  # (doc_path) -> greeting; see docs/welcome-message.md
     propose_draft: Callable[[str, str], dict] | None = None
 
 
@@ -106,6 +113,22 @@ def logic_step_observation(step) -> str:
     return ""
 
 
+def chat_blocked_by_pending(pending: Any) -> bool:
+    """True when Confirm/Cancel is showing; chat must not accept a new turn."""
+    return bool(pending)
+
+
+def opening_assistant_message(config: AssistantAppConfig, doc_path: str) -> str:
+    """First chat bubble: optional per-path builder, else static intro_message."""
+    if config.intro_builder is None:
+        return config.intro_message
+    try:
+        text = config.intro_builder(doc_path)
+    except (OSError, ValueError, TypeError):
+        return config.intro_message
+    return text.strip() or config.intro_message
+
+
 def run_assistant_app(config: AssistantAppConfig) -> None:
     agent = config.agent
     audit_agent = config.audit_agent
@@ -158,16 +181,21 @@ def run_assistant_app(config: AssistantAppConfig) -> None:
 
     st.header(config.title)
 
+    if "doc_path" not in st.session_state:
+        st.session_state["doc_path"] = config.default_doc_path
     if "messages" not in st.session_state:
         st.session_state["messages"] = [
-            {"role": "assistant", "content": config.intro_message}
+            {
+                "role": "assistant",
+                "content": opening_assistant_message(
+                    config, st.session_state["doc_path"]
+                ),
+            }
         ]
     if "last_result" not in st.session_state:
         st.session_state["last_result"] = None
     if "show_audit" not in st.session_state:
         st.session_state["show_audit"] = False
-    if "doc_path" not in st.session_state:
-        st.session_state["doc_path"] = config.default_doc_path
     if "pending_write" not in st.session_state:
         st.session_state["pending_write"] = None
     if "show_steps" not in st.session_state:
@@ -181,7 +209,12 @@ def run_assistant_app(config: AssistantAppConfig) -> None:
 
         if st.button(config.clear_history_label, use_container_width=True):
             st.session_state["messages"] = [
-                {"role": "assistant", "content": config.intro_message}
+                {
+                    "role": "assistant",
+                    "content": opening_assistant_message(
+                        config, st.session_state["doc_path"]
+                    ),
+                }
             ]
             st.session_state["last_result"] = None
             st.session_state["show_audit"] = False
@@ -278,9 +311,16 @@ def run_assistant_app(config: AssistantAppConfig) -> None:
             except Exception as e:
                 st.error(f"Audit failed: {e}")
 
-    prompt = st.chat_input(config.chat_placeholder)
+    pending = st.session_state.get("pending_write")
+    chat_blocked = chat_blocked_by_pending(pending)
+    prompt = st.chat_input(
+        config.pending_chat_placeholder if chat_blocked else config.chat_placeholder,
+        disabled=chat_blocked,
+    )
+    if chat_blocked:
+        st.caption(config.pending_chat_caption)
 
-    if prompt:
+    if prompt and not chat_blocked:
         st.session_state["show_audit"] = False
         st.session_state["show_steps"] = False
         st.session_state.messages.append({"role": "user", "content": prompt})

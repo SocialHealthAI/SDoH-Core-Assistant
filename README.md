@@ -37,7 +37,14 @@ Then rebuild the product image. Private repos need Docker git credentials (do no
 ```
 src/sdoh_core/     # importable package
 tests/unit/        # pytest; no live LLM calls
+docs/              # how product assistants use Core
 ```
+
+## Opening welcome message
+
+Each product assistant owns the first chat bubble (welcome, how it helps, optional recap of the current requirements file). Core only calls an optional `intro_builder(doc_path)` or falls back to `intro_message`.
+
+See [docs/welcome-message.md](docs/welcome-message.md).
 
 ## Tests
 

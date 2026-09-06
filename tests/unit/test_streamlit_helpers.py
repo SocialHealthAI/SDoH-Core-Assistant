@@ -1,12 +1,14 @@
 """Unit tests for Streamlit helper formatters. Does not run Streamlit."""
 from sdoh_core.streamlit_app import (
     AssistantAppConfig,
+    chat_blocked_by_pending,
     conversation_text,
     escape_markdown,
     last_assistant_content,
     logic_step_input,
     logic_step_label,
     logic_step_observation,
+    opening_assistant_message,
     run_assistant_app,
 )
 
@@ -61,3 +63,42 @@ def test_assistant_app_config_has_required_fields():
     assert callable(run_assistant_app)
     assert "Problem Definition" not in config.title
     assert "Problem Definition" not in (config.pending_review_caption or "")
+    assert config.pending_chat_placeholder
+    assert config.pending_chat_caption
+
+
+def test_opening_assistant_message_uses_builder_then_falls_back():
+    config = AssistantAppConfig(
+        title="Test",
+        intro_message="Static intro",
+        chat_placeholder="Type here",
+        file_input_label="File location",
+        default_doc_path="sdoh_documents/file.md",
+        agent=object(),
+        audit_agent=object(),
+        file_helper=object(),
+        intro_builder=lambda path: f"Welcome for {path}",
+    )
+
+    assert opening_assistant_message(config, "sdoh_documents/a.md") == (
+        "Welcome for sdoh_documents/a.md"
+    )
+
+    failing = AssistantAppConfig(
+        title="Test",
+        intro_message="Static intro",
+        chat_placeholder="Type here",
+        file_input_label="File location",
+        default_doc_path="sdoh_documents/file.md",
+        agent=object(),
+        audit_agent=object(),
+        file_helper=object(),
+        intro_builder=lambda _path: (_ for _ in ()).throw(ValueError("bad path")),
+    )
+    assert opening_assistant_message(failing, "x.md") == "Static intro"
+
+
+def test_chat_blocked_by_pending_when_write_is_waiting():
+    assert chat_blocked_by_pending(None) is False
+    assert chat_blocked_by_pending({}) is False
+    assert chat_blocked_by_pending({"path": "doc.md", "summary": "Propose section"}) is True
