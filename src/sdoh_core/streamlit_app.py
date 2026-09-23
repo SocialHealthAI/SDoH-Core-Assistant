@@ -28,6 +28,15 @@ class AssistantAppConfig:
     requirements_subheader: str = "Requirements file"
     sidebar_header: str = "Controls"
     clear_history_label: str = "Clear message history"
+    reload_file_label: str = "Reload file from disk"
+    reload_success: str = (
+        "Reloaded the file recap from disk. Chat history was kept. Nothing was written."
+    )
+    reload_pending_warning: str = (
+        "Reloaded the file recap from disk. A proposed write is still waiting. "
+        "Confirm would overwrite the current disk file. Cancel first if the "
+        "disk edits should win."
+    )
     save_draft_label: str = "Save current draft"
     confirm_write_label: str = "Confirm write"
     cancel_label: str = "Cancel"
@@ -118,6 +127,16 @@ def chat_blocked_by_pending(pending: Any) -> bool:
     return bool(pending)
 
 
+def replace_opening_message(messages: list, intro: str) -> list:
+    """Replace the first assistant bubble; keep later chat. Does not write files."""
+    opening = {"role": "assistant", "content": intro}
+    if not messages:
+        return [opening]
+    updated = list(messages)
+    updated[0] = opening
+    return updated
+
+
 def opening_assistant_message(config: AssistantAppConfig, doc_path: str) -> str:
     """First chat bubble: optional per-path builder, else static intro_message."""
     if config.intro_builder is None:
@@ -200,6 +219,8 @@ def run_assistant_app(config: AssistantAppConfig) -> None:
         st.session_state["pending_write"] = None
     if "show_steps" not in st.session_state:
         st.session_state["show_steps"] = False
+    if "reload_notice" not in st.session_state:
+        st.session_state["reload_notice"] = None
 
     agent.set_pending_write(st.session_state.get("pending_write"))
 
@@ -237,6 +258,25 @@ def run_assistant_app(config: AssistantAppConfig) -> None:
                 st.caption(config.file_missing_caption)
         except ValueError as e:
             st.error(str(e))
+
+        if st.button(config.reload_file_label, use_container_width=True):
+            intro = opening_assistant_message(config, st.session_state["doc_path"])
+            st.session_state["messages"] = replace_opening_message(
+                st.session_state.get("messages") or [],
+                intro,
+            )
+            st.session_state["reload_notice"] = (
+                "pending" if st.session_state.get("pending_write") else "ok"
+            )
+            st.rerun()
+
+        notice = st.session_state.get("reload_notice")
+        if notice == "pending":
+            st.warning(config.reload_pending_warning)
+        elif notice == "ok":
+            st.success(config.reload_success)
+        if notice:
+            st.session_state["reload_notice"] = None
 
         if st.button(config.save_draft_label, use_container_width=True):
             draft = last_assistant_content(st.session_state["messages"])

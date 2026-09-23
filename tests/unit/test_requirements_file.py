@@ -95,6 +95,12 @@ def test_exists_and_last_saved(tmp_path: Path):
     assert helper.exists("missing.md") is False
     assert helper.last_saved("a.md") is not None
     assert helper.last_saved("missing.md") is None
+    missing = helper.fingerprint("missing.md")
+    assert missing["exists"] is False
+    assert missing["sha256"] is None
+    present = helper.fingerprint("a.md")
+    assert present["exists"] is True
+    assert present["sha256"] == helper.fingerprint("a.md")["sha256"]
 
 
 def test_parse_empty_text_returns_no_sections(tmp_path: Path):

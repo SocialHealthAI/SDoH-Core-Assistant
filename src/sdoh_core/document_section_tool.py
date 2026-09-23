@@ -17,6 +17,11 @@ from sdoh_core.requirements_file import (
 )
 
 PROPOSED_WRITE_TYPE = "proposed_write"
+FILE_CHANGED_ON_DISK = (
+    "The requirements file changed on disk after this proposal. "
+    "Cancel, then propose again so we re-read the file. "
+    "Confirming now would overwrite those edits."
+)
 
 HeadingMatch = Callable[[str], bool]
 
@@ -87,6 +92,7 @@ class DocumentSectionTool:
             "heading": self.heading,
             "review_markdown": self._section_review(section_body),
             "proposed_full_text": proposed,
+            "baseline": self.helper.fingerprint(user_path),
             "wrote": False,
         }
 
@@ -111,7 +117,18 @@ class DocumentSectionTool:
         text = proposed.get("proposed_full_text")
         if not path or not isinstance(text, str):
             raise ValueError("Proposed write is missing path or text")
+        if confirm:
+            self._reject_if_file_changed(proposed)
         self.helper.write(path, text, confirm=confirm)
+
+    def _reject_if_file_changed(self, proposed: dict[str, Any]) -> None:
+        baseline = proposed.get("baseline")
+        path = proposed.get("path")
+        if not isinstance(baseline, dict) or not path:
+            return
+        current = self.helper.fingerprint(path)
+        if baseline.get("sha256") != current.get("sha256"):
+            raise ValueError(FILE_CHANGED_ON_DISK)
 
     def _section_review(self, section_body: str) -> str:
         body = section_body.strip("\n")

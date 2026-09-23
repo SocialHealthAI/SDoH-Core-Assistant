@@ -5,11 +5,13 @@ Library, not a LangChain tool and not the Document Management Tool.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 DEFAULT_RELATIVE_FILE = "ai-solution-requirements-definition.md"
 DEFAULT_DISPLAY_PATH = f"sdoh_documents/{DEFAULT_RELATIVE_FILE}"
@@ -90,6 +92,18 @@ class RequirementsFileHelper:
         if not path.is_file():
             return None
         return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+
+    def fingerprint(self, user_path: str) -> dict[str, Any]:
+        """Snapshot used to detect out-of-band edits before Confirm write."""
+        path = self.resolve(user_path)
+        if not path.is_file():
+            return {"exists": False, "mtime_ns": None, "sha256": None}
+        data = path.read_bytes()
+        return {
+            "exists": True,
+            "mtime_ns": path.stat().st_mtime_ns,
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
 
     def read(self, user_path: str) -> str:
         path = self.resolve(user_path)

@@ -104,6 +104,23 @@ def test_inserts_missing_numbered_section_in_numeric_order(tmp_path: Path):
     assert "Keep gamma." in text
 
 
+def test_apply_proposed_write_refuses_if_file_changed_on_disk(tmp_path: Path):
+    from sdoh_core.document_section_tool import FILE_CHANGED_ON_DISK
+
+    helper = RequirementsFileHelper(tmp_path)
+    helper.write("doc.md", FIXTURE, confirm=True)
+    tool = DocumentSectionTool(helper, heading="1. Alpha")
+    proposed = tool.propose_section("doc.md", "Updated alpha")
+    helper.write("doc.md", FIXTURE.replace("Keep gamma.", "Edited out of band."), confirm=True)
+
+    with pytest.raises(ValueError, match="changed on disk"):
+        tool.apply_proposed_write(proposed, confirm=True)
+
+    assert "Edited out of band." in helper.read("doc.md")
+    assert "Updated alpha" not in helper.read("doc.md")
+    assert FILE_CHANGED_ON_DISK
+
+
 def test_current_section_reads_bound_heading(tmp_path: Path):
     helper = RequirementsFileHelper(tmp_path)
     helper.write("doc.md", FIXTURE, confirm=True)

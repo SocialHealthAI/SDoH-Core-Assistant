@@ -9,6 +9,7 @@ from sdoh_core.streamlit_app import (
     logic_step_label,
     logic_step_observation,
     opening_assistant_message,
+    replace_opening_message,
     run_assistant_app,
 )
 
@@ -96,6 +97,21 @@ def test_opening_assistant_message_uses_builder_then_falls_back():
         intro_builder=lambda _path: (_ for _ in ()).throw(ValueError("bad path")),
     )
     assert opening_assistant_message(failing, "x.md") == "Static intro"
+
+
+def test_replace_opening_message_keeps_later_chat():
+    messages = [
+        {"role": "assistant", "content": "old recap"},
+        {"role": "user", "content": "edit the file"},
+        {"role": "assistant", "content": "proposed a change"},
+    ]
+
+    updated = replace_opening_message(messages, "new recap from disk")
+
+    assert updated[0] == {"role": "assistant", "content": "new recap from disk"}
+    assert updated[1]["content"] == "edit the file"
+    assert updated[2]["content"] == "proposed a change"
+    assert messages[0]["content"] == "old recap"
 
 
 def test_chat_blocked_by_pending_when_write_is_waiting():
