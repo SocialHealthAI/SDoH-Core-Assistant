@@ -14,11 +14,12 @@ Core’s Streamlit shell shows one assistant message when a chat session **start
 `opening_assistant_message(config, doc_path)` picks the builder result or the fallback. `run_assistant_app` calls it:
 
 - on first visit (`messages` not yet in session state), after `doc_path` is initialized to `default_doc_path`
-- on **Clear message history**, using the path currently in the sidebar
+- on **Clear message history**, using the path currently in the sidebar (also drops chat and any pending Confirm)
+- on **Reload file from disk**, using the path currently in the sidebar (replaces only the first bubble; does **not** write the file and does **not** apply Confirm)
 
-An existing browser session keeps its old first bubble until the practitioner refreshes in a way that drops session state, or clears history.
+An existing browser session keeps its old first bubble until Reload, Clear message history, or a refresh that drops session state.
 
-Chat is not a new session when they only change the file path. Rebuild the greeting by clearing history after they switch files, or they will still see the previous opening text.
+Chat is not a new session when they only change the file path. Use **Reload file from disk** (or clear history) after they switch files, or they will still see the previous opening text. If a proposed write is waiting, Reload keeps it and warns that Confirm would overwrite the current disk file.
 
 ## What each assistant should say
 

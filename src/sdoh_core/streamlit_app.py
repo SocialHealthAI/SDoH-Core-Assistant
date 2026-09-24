@@ -56,7 +56,7 @@ class AssistantAppConfig:
     pending_chat_caption: str = (
         "Chat is paused until you Confirm write or Cancel."
     )
-    intro_builder: Callable[[str], str] | None = None  # (doc_path) -> greeting; see docs/welcome-message.md
+    intro_builder: Callable[[str], str] | None = None  # (doc_path) -> greeting; see docs/contract.md
     propose_draft: Callable[[str, str], dict] | None = None
 
 

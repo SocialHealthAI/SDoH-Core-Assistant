@@ -44,7 +44,7 @@ docs/              # how product assistants use Core
 
 Each product assistant owns the first chat bubble (welcome, how it helps, optional recap of the current requirements file). Core only calls an optional `intro_builder(doc_path)` or falls back to `intro_message`.
 
-See [docs/welcome-message.md](docs/welcome-message.md).
+See [docs/contract.md](docs/contract.md) for the welcome builder. See [docs/Agent Responsibilities.md](docs/Agent Responsibilities.md) for orchestrator and document-management requirements that product assistants must follow.
 
 ## Tests
 
